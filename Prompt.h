@@ -9,10 +9,9 @@
 
 void displayPrompt();
 
-void readInput();
+void evaluateInput(char* input, char** args);
 
-void loop();
-
+void parseToArgs(char* input, char** args);
 
 #endif //EX2_PROMPT_H
 
