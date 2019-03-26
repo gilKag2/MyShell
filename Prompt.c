@@ -8,7 +8,7 @@
 
 void displayPrompt()
 {
-        printf(">");
+        printf("> ");
 }
 
 void evaluateInput(char* input, char** args)
