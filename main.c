@@ -17,7 +17,7 @@ struct jobs {
 
 
 
-int activateShell(char** args) {
+int activateShell(int isBackground, char** args) {
     pid_t  pid;
     int status;
     if ((pid = fork()) == 0) {
@@ -28,6 +28,10 @@ int activateShell(char** args) {
         }
 
     } else if (pid != -1){
+        if (isBackground) {
+            printf("%d\n", pid);
+            return 1;
+        }
         do{
             waitpid(pid, &status, WUNTRACED);
         } while (!WIFEXITED(status) && !WIFSIGNALED(status));
@@ -35,6 +39,7 @@ int activateShell(char** args) {
     else {
         fprintf(stderr, "Error in system call");
     }
+    return 1;
 }
 
 
@@ -63,7 +68,7 @@ int execute(int isBackground, char ** args) {
     else if (strcmp(args[0], "exit") == 0) {
         return 0;
     }
-    return activateShell(args);
+    return activateShell(isBackground, args);
 }
 
 int main() {
