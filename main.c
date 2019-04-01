@@ -45,36 +45,6 @@ void updateCwd() {
     getcwd(shellInfo.cwd, sizeof(shellInfo.cwd));
 }
 
-void activateCdCommand(char** args) {
-    printf("%d\n", getpid());
-    if (args[1] == NULL || strcmp(args[1], "~") == 0) {
-        struct passwd *pwd = getpwuid(getuid());
-        if (chdir(pwd->pw_dir) != 0) {
-            fprintf(stderr, "Error in system call");
-            return;
-        }
-        updatePwd();
-        updateCwd();
-
-    } else if (strcmp(args[1], "-")== 0) {
-        if (strcmp(shellInfo.pwd, shellInfo.cwd) != 0) {
-            printf("%s\n", shellInfo.pwd);
-            if (chdir(shellInfo.pwd) != 0)
-                fprintf(stderr, "Error in system call");
-            // update the parent directory to be the current.
-            updatePwd();
-            // update the current directory.
-            updateCwd();
-        }
-    }
-    else{
-        char *str;
-        strcpy(str, args[1]);
-        if (chdir(args[1]) != 0)
-            fprintf(stderr, "Error in system call");
-    }
-}
-
 
 
 void freeShell() {
@@ -113,8 +83,40 @@ void checkStatus() {
         }
     }
 }
-int execute(struct Job* job, char** args) {
-   
+
+void activateCdCommand(char** args) {
+    printf("%d\n", getpid());
+    if (args[1] == NULL || strcmp(args[1], "~") == 0) {
+        if (chdir(getenv("HOME")) != 0) {
+            fprintf(stderr, "Error in system call");
+            return;
+        }
+        updatePwd();
+        updateCwd();
+
+    } else if (strcmp(args[1], "-")== 0) {
+        if (strcmp(shellInfo.pwd, shellInfo.cwd) != 0) {
+            printf("%s\n", shellInfo.pwd);
+            if (chdir(shellInfo.pwd) != 0)
+                fprintf(stderr, "Error in system call");
+            // update the parent directory to be the current.
+            updatePwd();
+            // update the current directory.
+            updateCwd();
+        }
+    }
+    else{
+        char  str[INPUT_SIZE] = "";
+        strcpy(str, args[1]);
+        if (chdir(str) != 0)
+            fprintf(stderr, "Error in system call");
+        updatePwd();
+        updateCwd();
+    }
+}
+
+
+int execBuiltIn(char** args) {
     if (strcmp(args[0], "cd") == 0) {
         activateCdCommand(args);
         return 1;
@@ -127,6 +129,11 @@ int execute(struct Job* job, char** args) {
         printJobs();
         return 1;
     }
+    return  0;
+
+}
+
+int execute(struct Job* job, char** args) {
 
     pid_t  pid;
     int status;
@@ -162,6 +169,7 @@ void readLine(char* input) {
 
 char** parseToArgs(char* line) {
     char** args = (char**)malloc(INPUT_SIZE * sizeof(char*));
+
     // in case of alloc error.
     if (!args) {
         fprintf(stderr, "Error in system call");
@@ -174,6 +182,7 @@ char** parseToArgs(char* line) {
        counter++;
         token = strtok(NULL, " ");
     }
+    args[counter] = NULL;
     return args;
 }
 
@@ -189,7 +198,7 @@ void init() {
 
 
 void activateShell() {
-    int status;
+    int status = 1;
     // one array for the input line, and the other is the parsed array.
 
     do{
@@ -206,13 +215,15 @@ void activateShell() {
             mode = BACKGROUND;
             line[strlen(line) - 1] = '\0';
         }
-        args = parseToArgs(line);
         struct Job * job = (struct Job*) malloc(sizeof(struct Job));
         strcpy(job->command , line);
         job->pid = -1;
         job->mode = mode;
+        args = parseToArgs(line);
 
-        status = execute(job, args);
+        if(!execBuiltIn(args))
+            status = execute(job, args);
+
         free(args);
         sleep(1);
     } while (status);
